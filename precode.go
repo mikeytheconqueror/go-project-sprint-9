@@ -18,15 +18,15 @@ func Generator(ctx context.Context, ch chan<- int64, fn func(int64)) {
 	// ...
 	defer close(ch)
 
-	n := 1
+	n := int64(1)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			fn(int64(n))
-			ch <- int64(n)
+			fn(n)
+			ch <- n
 			n++
 		}
 	}
@@ -54,8 +54,8 @@ func main() {
 	// 3. Создание контекста
 	// ...
 
-	ctx, cancel := context.WithCancel(context.Background())
-	time.AfterFunc(1*time.Second, cancel)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
 
 	// для проверки будем считать количество и сумму отправленных чисел
 	var inputSum int64   // сумма сгенерированных чисел
@@ -63,6 +63,7 @@ func main() {
 
 	// генерируем числа, считая параллельно их количество и сумму
 	go Generator(ctx, chIn, func(i int64) {
+
 		atomic.AddInt64(&inputSum, i)
 		atomic.AddInt64(&inputCount, 1)
 	})
@@ -84,8 +85,6 @@ func main() {
 	var wg sync.WaitGroup
 
 	// 4. Собираем числа из каналов outs
-	// ...
-
 	for i, out := range outs {
 
 		wg.Add(1)
